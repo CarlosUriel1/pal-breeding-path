@@ -18,7 +18,7 @@ export function buildSaveParser(maps) {
     f32() { const v = this.dv.getFloat32(this.o, true); this.o += 4; return v; }
     f64() { const v = this.dv.getFloat64(this.o, true); this.o += 8; return v; }
     skip(n) { this.o += n; }
-    bytes(n) { const s = this.b.subarray(this.o, this.o + n); this.o += n; return s; }
+    bytes(n) { if (n < 0 || this.o + n > this.b.length) throw new Error('Archivo de guardado incompleto o corrupto.'); const s = this.b.subarray(this.o, this.o + n); this.o += n; return s; }
     bool() { return this.u8() > 0; }
     guidHex() { let h = ''; for (let i = 0; i < 16; i++) h += this.b[this.o + i].toString(16).padStart(2, '0'); this.o += 16; return h; }
     optGuid() { if (this.u8() !== 0) this.skip(16); }
@@ -330,7 +330,7 @@ export function buildSaveParser(maps) {
     const rows = values.flatMap((entry) => {
       const saveParameter = entry.SaveParameter?.value;
       if (!saveParameter) return [];
-      const key = entry.InstanceId?.value || {};
+      const key = entry.InstanceId ? { InstanceId: entry.InstanceId } : {};
       const row = normalizeCharacter({ key, saveParameter, groupId: null }, 'Dimensional');
       return row ? [row] : [];
     });

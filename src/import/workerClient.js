@@ -8,15 +8,30 @@ const sourceFor = (file, relativePath = null) => ({
   lastModified: file.lastModified,
 });
 
-const runWorker = (message, transfers, onProgress) => new Promise((resolve, reject) => {
+const abortError = () => new DOMException('La importación se canceló.', 'AbortError');
+
+const runWorker = (message, transfers, onProgress, signal) => new Promise((resolve, reject) => {
+  if (signal?.aborted) {
+    reject(abortError());
+    return;
+  }
   const worker = new Worker(new URL('./save.worker.js', import.meta.url), { type: 'module' });
-  const timeout = window.setTimeout(() => {
+  const cleanup = () => {
+    window.clearTimeout(timeout);
+    signal?.removeEventListener('abort', onAbort);
     worker.terminate();
+  };
+  const timeout = window.setTimeout(() => {
+    cleanup();
     reject(new Error('El análisis tardó más de 120 segundos y se detuvo.'));
   }, PARSE_TIMEOUT_MS);
+  const onAbort = () => {
+    cleanup();
+    reject(abortError());
+  };
+  signal?.addEventListener('abort', onAbort, { once: true });
   const finish = (callback, value) => {
-    window.clearTimeout(timeout);
-    worker.terminate();
+    cleanup();
     callback(value);
   };
   worker.onmessage = ({ data }) => {
@@ -61,7 +76,7 @@ const transferBuffers = (bundle) => [
   bundle.level, bundle.meta, bundle.option, ...(bundle.players || []), ...(bundle.dimensional || []),
 ].filter(Boolean).map((descriptor) => descriptor.buffer);
 
-export async function parsePalworldSave(file, onProgress = () => {}) {
+export async function parsePalworldSave(file, onProgress = () => {}, signal) {
   if (!file) throw new Error('No se recibió ningún archivo.');
   if (file.size > MAX_SAVE_FILE_SIZE) {
     throw new Error('El guardado supera el límite local de 512 MiB.');
@@ -74,21 +89,22 @@ export async function parsePalworldSave(file, onProgress = () => {}) {
       type: 'parse',
       buffer,
       source: sourceFor(file),
-    }, [buffer], onProgress);
+    }, [buffer], onProgress, signal);
 }
 
-export async function inspectPalworldWorld(candidate, onProgress = () => {}) {
+export async function inspectPalworldWorld(candidate, onProgress = () => {}, signal) {
   onProgress('Leyendo los archivos del mundo…');
   const bundle = await worldBundle(candidate);
-  return runWorker({ type: 'inspect-world', bundle }, transferBuffers(bundle), onProgress);
+  return runWorker({ type: 'inspect-world', bundle }, transferBuffers(bundle), onProgress, signal);
 }
 
-export async function parsePalworldWorld(candidate, selectedPlayerIds = [], onProgress = () => {}) {
+export async function parsePalworldWorld(candidate, selectedPlayerIds = [], onProgress = () => {}, signal) {
   onProgress('Leyendo los archivos del mundo…');
   const bundle = await worldBundle(candidate);
   return runWorker(
     { type: 'parse-world', bundle, selectedPlayerIds },
     transferBuffers(bundle),
-    onProgress
+    onProgress,
+    signal
   );
 }

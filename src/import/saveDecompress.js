@@ -43,7 +43,26 @@ async function inflate(bytes) {
     throw new Error('Este navegador no puede descomprimir guardados PlZ. Usa Chrome o Edge reciente.');
   }
   const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate'));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
+  const reader = stream.getReader();
+  const chunks = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_UNCOMPRESSED_SIZE) {
+      await reader.cancel();
+      throw new Error('El guardado descomprimido supera el tamaño máximo permitido.');
+    }
+    chunks.push(value);
+  }
+  const output = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    output.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return output;
 }
 
 export async function decompressPalworldSave(input) {
@@ -68,6 +87,9 @@ export async function decompressPalworldSave(input) {
   }
 
   if (magic === 'PlM') {
+    if (saveType !== 0x31) {
+      throw new Error(`Tipo de guardado PlM no compatible (${saveType}).`);
+    }
     const instance = await getOozModule();
     return {
       bytes: oozDecompress(instance, bytes.subarray(HEADER_SIZE), rawSize),
@@ -76,6 +98,9 @@ export async function decompressPalworldSave(input) {
   }
 
   if (magic === 'PlZ') {
+    if (saveType !== 0x31 && saveType !== 0x32) {
+      throw new Error(`Tipo de guardado PlZ no compatible (${saveType}).`);
+    }
     let output = await inflate(bytes.subarray(HEADER_SIZE));
     if (saveType === 0x32) output = await inflate(output);
     return { bytes: output, format: `PlZ${String.fromCharCode(saveType)}` };

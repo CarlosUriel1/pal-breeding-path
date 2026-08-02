@@ -63,7 +63,7 @@ flowchart LR
 
 ### 1. Cargar el save
 
-En **Mis Pals → Importar save**, usa una de estas opciones:
+Pulsa la tarjeta **Elige origen**, abre la pestaña **Importar save** y usa una de estas opciones:
 
 - **Elegir carpeta SaveGames**: selecciona la carpeta completa
   `%LOCALAPPDATA%\Pal\Saved\SaveGames`. Es la opción recomendada porque permite encontrar los
@@ -372,7 +372,7 @@ Ejemplo reducido:
 
 | Campo | Tipo | Descripción |
 | --- | --- | --- |
-| `instanceId` | texto | Identificador local derivado del contenedor, slot e índice de lectura. No es un GUID estable del juego. |
+| `instanceId` | texto | `InstanceId` (GUID) del registro del save cuando está presente; si falta, se deriva localmente como `contenedor:slot:índice` de lectura. |
 | `palId` | texto | Clave de especie usada por `src/data/pals.json` y el motor. |
 | `speciesCode` | texto | Código interno de Palworld. |
 | `name` | texto | Nombre base conocido por la base local. |
@@ -482,15 +482,21 @@ base de datos de origen; actualmente el planificador no lo utiliza para calcular
 | --- | --- |
 | `src/App.jsx` | Estado principal, persistencia de preferencias y coordinación entre importador, selectores y resultados. |
 | `src/components/` | Interfaz: carga, colección, objetivo, pasivas, ayuda, ruta, árbol y planes guardados. |
+| `src/i18n.js` | Idiomas admitidos, textos de la guía integrada y utilidades de traducción. |
 | `src/data/pals.json` | Especies, rangos, combinaciones e iconos asociados. |
 | `src/data/passives_i18n.json` | Catálogo incorporado de nombres y descripciones bilingües. |
 | `src/data/passiveCatalog.js` | Normalización, búsqueda, traducciones personalizadas y estilos por rango. |
+| `src/data/passive_names.json` | Mapa de identificadores internos de pasivas a su nombre en inglés; el lector del save lo usa para llenar `passives`. |
 | `src/engine/breeding.js` | Reglas por especie y cálculo del hijo de cada pareja. |
 | `src/engine/collectionPlanner.js` | Búsqueda por ejemplar exacto, sexo y máscara de hasta cuatro pasivas. |
 | `src/engine/planner.worker.js` | Ejecuta el planificador sin bloquear la interfaz. |
+| `src/engine/plannerClient.js` | Crea el Worker del planificador por solicitud y gestiona progreso, errores y cancelación. |
 | `src/import/gvasParser.js` | Lector binario de las propiedades necesarias de `worldSaveData`. |
 | `src/import/saveDecompress.js` | Detección y descompresión de `GVAS`, `PlM` y `PlZ`. |
+| `src/import/importPalworldSave.js` | Normaliza las filas del parser en la colección: mundo, jugadores, ubicación por contenedor, propietarios y dimensionales compartidos. |
 | `src/import/save.worker.js` | Analiza el save fuera del hilo principal. |
+| `src/import/workerClient.js` | Prepara los archivos, aplica los límites de 512 MiB y 120 segundos y ejecuta `save.worker.js` con mensajes de progreso. |
+| `src/import/findSaveCandidates.js` | Encuentra cada `Level.sav` de la carpeta elegida y agrupa sus `LevelMeta.sav`, `WorldOption.sav` y archivos de `Players/`, omitiendo `backup`. |
 | `src/import/collectionStore.js` | Guarda o elimina la colección activa en IndexedDB. |
 | `src/vendor/` | Dependencias incorporadas para descompresión. |
 | `public/pals/` | Imágenes locales de especies. |

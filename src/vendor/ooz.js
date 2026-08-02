@@ -1,3 +1,6 @@
+// ooz-wasm: descompresor Kraken/Oodle del proyecto ooz (https://github.com/powzix/ooz).
+// Build precompilada wasm+glue (Emscripten) vendorizada; la revisión exacta no quedó registrada.
+// Licencia GPL-3.0 o posterior; ver LICENSES/ooz-wasm-GPL-3.0.txt y THIRD_PARTY_NOTICES.md.
 
 var Module = (() => {
   var _scriptDir = import.meta.url;

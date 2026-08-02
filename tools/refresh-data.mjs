@@ -4,6 +4,7 @@
 // lo aísla de Vue con stubs y vuelca el diccionario de pals a JSON.
 import { mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -71,8 +72,15 @@ src = src.replace(/import\s*["'][^"']+["'];?/g, '');
 const isolated = path.join(TMP, 'data-only.mjs');
 await writeFile(isolated, stubHeader + src);
 
-// 5) Encuentra el export que sea el diccionario de pals
-const mod = await import(pathToFileURL(isolated).href);
+// 5) Importa el chunk en un subproceso aislado con el modelo de permisos de Node:
+// --permission (estable desde Node 22.13/23.5; en Node 20-21 es --experimental-permission)
+// deniega fs, child_process y workers por defecto; solo se concede lectura del
+// directorio del chunk para poder importarlo. Así el código descargado no puede
+// tocar el disco ni lanzar procesos aunque palbreed.com esté comprometido.
+// Riesgo residual: --permission NO bloquea la red, así que un chunk comprometido
+// aún podría exfiltrar datos del entorno del proceso (no del disco) vía fetch.
+const finderScript = `
+const mod = await import(${JSON.stringify(pathToFileURL(isolated).href)});
 let pals = null;
 for (const key of Object.keys(mod)) {
   const v = mod[key];
@@ -84,9 +92,30 @@ for (const key of Object.keys(mod)) {
     }
   }
 }
-if (!pals) throw new Error('no se encontró el export con los pals');
-await writeFile(path.join(ROOT, 'src', 'data', 'pals.json'), JSON.stringify(pals));
-console.log('src/data/pals.json actualizado con', Object.keys(pals).length, 'pals');
+if (!pals) {
+  console.error('no se encontró el export con los pals');
+  process.exit(1);
+}
+process.stdout.write(JSON.stringify(pals));
+`;
+const stdout = execFileSync(
+  process.execPath,
+  ['--permission', `--allow-fs-read=${TMP}${path.sep}*`, '--input-type=module', '-e', finderScript],
+  { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }
+);
+const pals = JSON.parse(stdout);
+
+// Conserva solo los campos que consume src/ (motor de crianza e importador de
+// guardados); el resto del chunk (stats, drops, descripciones…) no se usa.
+const KEEP_FIELDS = ['id', 'key', 'name', 'index', 'suffix', 'combiRank', 'combiPriority', 'ignoreCombi', 'isBoss', 'elements', 'icon', 'combos'];
+const slim = Object.fromEntries(
+  Object.entries(pals).map(([id, pal]) => [
+    id,
+    Object.fromEntries(KEEP_FIELDS.filter((field) => field in pal).map((field) => [field, pal[field]])),
+  ])
+);
+await writeFile(path.join(ROOT, 'src', 'data', 'pals.json'), JSON.stringify(slim));
+console.log('src/data/pals.json actualizado con', Object.keys(slim).length, 'pals');
 
 // 6) Iconos que falten
 const DEST = path.join(ROOT, 'public', 'pals');

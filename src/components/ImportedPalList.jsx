@@ -16,7 +16,9 @@ const copy = {
     empty: 'Ningún Pal coincide con la búsqueda.',
     level: 'Nv.',
     noPassives: 'Sin pasivas',
-    location: { palbox: 'Palbox', party: 'Equipo', 'base-or-other': 'Base/otro', unknown: 'Ubicación desconocida' },
+    favorite: 'Favorito',
+    alpha: 'ALFA',
+    location: { palbox: 'Palbox', party: 'Equipo', dimensional: 'Alm. dimensional', 'base-or-other': 'Base/otro', unknown: 'Ubicación desconocida' },
   },
   en: {
     title: 'Your imported Pals',
@@ -24,7 +26,9 @@ const copy = {
     empty: 'No Pal matches this search.',
     level: 'Lv.',
     noPassives: 'No passives',
-    location: { palbox: 'Palbox', party: 'Party', 'base-or-other': 'Base/other', unknown: 'Unknown location' },
+    favorite: 'Favorite',
+    alpha: 'ALPHA',
+    location: { palbox: 'Palbox', party: 'Party', dimensional: 'Dimensional storage', 'base-or-other': 'Base/other', unknown: 'Unknown location' },
   },
 };
 
@@ -87,6 +91,8 @@ export default function ImportedPalList({ collection, language, customPassives }
                   <strong>{instance.nickname || pal.name}</strong>
                   {instance.nickname && <small>{pal.name}</small>}
                 </div>
+                {instance.alphaOrBoss && <span className="alpha-badge">{text.alpha}</span>}
+                {instance.favorite && <span className="fav-star" title={text.favorite} aria-label={text.favorite}>★</span>}
                 <span className={`gender ${instance.gender === 'F' ? 'female' : 'male'}`}>
                   {genderMark(instance.gender)}
                 </span>

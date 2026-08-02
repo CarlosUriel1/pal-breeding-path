@@ -1,7 +1,6 @@
 import { breedableIds, calculateChild, palsById } from './breeding.js';
 
 const DEFAULT_MAX_BREEDS = 32;
-const DEFAULT_MAX_STATES = 12_000;
 const DEFAULT_MAX_PAIRS = 20_000_000;
 
 const unique = (values) => [...new Set((values || []).filter(Boolean))];
@@ -9,6 +8,11 @@ const unique = (values) => [...new Set((values || []).filter(Boolean))];
 const breedablePals = [...breedableIds].map((id) => palsById[id]);
 const palIndexById = new Map(breedablePals.map((pal, index) => [pal.id, index]));
 const pairWidth = breedablePals.length;
+// Espacio real de claves de estado: especies x 2 sexos x 16 máscaras de pasivas (~9504).
+// El presupuesto por defecto se deriva de ese espacio para que 'state-budget' sea
+// alcanzable: el antiguo valor fijo de 12000 lo superaba y jamás podía dispararse,
+// dejando que las búsquedas sin ruta degeneraran en millones de parejas evaluadas.
+const DEFAULT_MAX_STATES = Math.floor(pairWidth * 2 * 16 * 0.75);
 const childByMaleFemalePair = new Array(pairWidth * pairWidth);
 for (let maleIndex = 0; maleIndex < pairWidth; maleIndex++) {
   for (let femaleIndex = 0; femaleIndex < pairWidth; femaleIndex++) {
@@ -130,7 +134,18 @@ export function findCollectionPlan({
   const bitByPassive = new Map(desired.map((id, index) => [id, 1 << index]));
   const desiredSet = new Set(desired);
   const availableDesired = new Set();
+  // Pasivas deseadas vistas solo en ejemplares descartados: id -> motivos de descarte.
+  const discardedDesired = new Map();
   const warnings = { skippedUnknownGender: 0, skippedUnknownSpecies: 0, missingPassiveIds: [] };
+
+  const noteDiscarded = (instance, discardReason) => {
+    for (const id of unique(instance.passiveIds)) {
+      if (!desiredSet.has(id)) continue;
+      const reasons = discardedDesired.get(id) || new Set();
+      reasons.add(discardReason);
+      discardedDesired.set(id, reasons);
+    }
+  };
 
   const maskFor = (passiveIds) => {
     let mask = 0;
@@ -152,10 +167,12 @@ export function findCollectionPlan({
     const palIndex = palIndexById.get(instance.palId);
     if (palIndex == null) {
       warnings.skippedUnknownSpecies++;
+      noteDiscarded(instance, 'unknown-species');
       continue;
     }
     if (instance.gender !== 'M' && instance.gender !== 'F') {
       warnings.skippedUnknownGender++;
+      noteDiscarded(instance, 'unknown-gender');
       continue;
     }
     const passiveIds = unique(instance.passiveIds);
@@ -186,9 +203,18 @@ export function findCollectionPlan({
   for (const state of best.values()) heap.push(state);
   if (!heap.size) return { status: 'error', reason: 'no-compatible-pals', warnings };
 
-  warnings.missingPassiveIds = desired.filter((id) => !availableDesired.has(id));
+  // Distingue las deseadas ausentes de toda la colección de las que sí existen
+  // pero solo en ejemplares descartados (especie o sexo desconocidos).
+  const unavailableDesired = desired.filter((id) => !availableDesired.has(id));
+  warnings.missingPassiveIds = unavailableDesired.filter((id) => !discardedDesired.has(id));
+  const discardedPassives = unavailableDesired
+    .filter((id) => discardedDesired.has(id))
+    .map((id) => ({ passiveId: id, discardReasons: [...discardedDesired.get(id)] }));
   if (warnings.missingPassiveIds.length) {
-    return { status: 'error', reason: 'missing-passives', warnings };
+    return { status: 'error', reason: 'missing-passives', discardedPassives, warnings };
+  }
+  if (discardedPassives.length) {
+    return { status: 'error', reason: 'passives-on-discarded', discardedPassives, warnings };
   }
 
   const alreadyOwned = [...best.values()]
@@ -211,7 +237,12 @@ export function findCollectionPlan({
     settledByGender[state.gender].push(state);
 
     if (state.palId === targetId && state.mask === fullMask) {
-      return finalizePlan(state, desired, { exploredStates: settled.size, evaluatedPairs }, warnings);
+      const plan = finalizePlan(state, desired, { exploredStates: settled.size, evaluatedPairs }, warnings);
+      // maxBreeds se evalúa contra las cruzas reales (pasos deduplicados),
+      // no contra el coste-árbol del estado.
+      if (plan.breedingCount <= maxBreeds) return plan;
+      budgetReason = 'breed-budget';
+      break;
     }
 
     if (settled.size >= maxStates) {
@@ -236,11 +267,19 @@ export function findCollectionPlan({
 
       const mask = parentA.mask | parentB.mask;
       const carriedPassiveIds = desiredIdsForMask(mask);
-      const parentPassiveIds = unique([...parentA.passiveIds, ...parentB.passiveIds]);
-      const competitorPassiveIds = parentPassiveIds.filter((id) => !desiredSet.has(id));
+      // Unión de las pasivas NO deseadas de ambos padres; los padres criados ya
+      // traen las suyas propagadas en competitorPassiveIds, así que las cadenas
+      // de 2+ pasos conservan las competidoras de toda la ascendencia.
+      const competitorPassiveIds = unique([...parentA.competitorPassiveIds, ...parentB.competitorPassiveIds]);
       const actionId = `breed-${++actionCounter}`;
+      // Coste-árbol con repeticiones: cada padre suma su subárbol completo aunque se
+      // comparta, lo que mantiene la monotonía del heap pero sobreestima las cruzas
+      // reales (los pasos deduplicados). Por eso no sirve para podar por maxBreeds;
+      // la profundidad sí es cota inferior de las cruzas reales y poda sin descartar
+      // planes cuyo número deduplicado cabría.
       const cost = parentA.cost + parentB.cost + 1;
-      if (cost > maxBreeds) continue;
+      const depth = Math.max(parentA.depth, parentB.depth) + 1;
+      if (depth > maxBreeds) continue;
 
       for (const childGender of ['M', 'F']) {
         const candidateActionId = `${actionId}-${childGender}`;
@@ -252,10 +291,10 @@ export function findCollectionPlan({
           mask,
           carriedPassiveIds,
           passiveIds: carriedPassiveIds,
-          competitorPassiveIds: [],
+          competitorPassiveIds,
           competitorCount: competitorPassiveIds.length,
           cost,
-          depth: Math.max(parentA.depth, parentB.depth) + 1,
+          depth,
           ivScore: Math.max(parentA.ivScore, parentB.ivScore),
           level: 1,
           sourceKind: 'bred',

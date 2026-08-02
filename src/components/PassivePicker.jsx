@@ -5,6 +5,7 @@ import {
   normalizeCustomPassiveCatalog,
   normalizeText,
   passiveCatalog,
+  passiveDescription,
   passiveName,
   rankTone,
 } from '../data/passiveCatalog.js';
@@ -197,18 +198,21 @@ export default function PassivePicker({
         {filtered.map((passive) => {
           const selected = draftIds.includes(passive.id);
           const secondary = alternatePassiveName(passive, language);
+          const description = passiveDescription(passive, language);
           return (
             <button
               type="button"
               key={passive.id}
               className={`passive-option ${rankTone(passive.rank)}${selected ? ' selected' : ''}`}
               aria-pressed={selected}
+              title={description ? `${passiveName(passive, language)} — ${description}` : passiveName(passive, language)}
               onClick={() => toggle(passive.id)}
             >
               <span className="passive-rank">{passive.rank > 0 ? `+${passive.rank}` : passive.rank}</span>
               <span className="passive-copy">
                 <strong>{passiveName(passive, language)}</strong>
                 {secondary !== passiveName(passive, language) && <small>{secondary}</small>}
+                <span>{description || text.noDescription}</span>
               </span>
               <span className="passive-check">{selected ? '✓' : '+'}</span>
             </button>

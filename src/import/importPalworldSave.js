@@ -137,33 +137,60 @@ async function readWorldBundle(bundle, onProgress = () => {}) {
   onProgress('Leyendo los datos del mundo…');
   const levelParsed = parser.parsePalbox(level.decompressed.bytes);
   const levelPlayers = parser.parseWorldPlayers(level.decompressed.bytes).players;
-  const playerDescriptors = await Promise.all((bundle.players || []).map(decompressDescriptor));
-  const savedPlayers = playerDescriptors.map((descriptor) => ({
-    ...parser.parsePlayerSave(descriptor.decompressed.bytes),
-    source: descriptor.source,
-  }));
+
+  // Los archivos auxiliares corruptos o vacíos se descartan con un warning;
+  // solo Level.sav es imprescindible para importar el mundo.
+  const failedFiles = [];
+  const descriptorPath = (descriptor) =>
+    descriptor?.source?.relativePath || descriptor?.source?.name || 'archivo desconocido';
+
+  const savedPlayers = [];
+  for (const playerDescriptor of bundle.players || []) {
+    try {
+      const descriptor = await decompressDescriptor(playerDescriptor);
+      savedPlayers.push({
+        ...parser.parsePlayerSave(descriptor.decompressed.bytes),
+        source: descriptor.source,
+      });
+    } catch {
+      failedFiles.push(descriptorPath(playerDescriptor));
+    }
+  }
 
   let metadata = {};
   if (bundle.meta?.buffer) {
-    const descriptor = await decompressDescriptor(bundle.meta);
-    metadata = parser.parseLevelMeta(descriptor.decompressed.bytes);
+    try {
+      const descriptor = await decompressDescriptor(bundle.meta);
+      metadata = parser.parseLevelMeta(descriptor.decompressed.bytes);
+    } catch {
+      failedFiles.push(descriptorPath(bundle.meta));
+    }
   }
   let options = {};
   if (bundle.option?.buffer) {
-    const descriptor = await decompressDescriptor(bundle.option);
-    options = parser.parseWorldOptions(descriptor.decompressed.bytes);
+    try {
+      const descriptor = await decompressDescriptor(bundle.option);
+      options = parser.parseWorldOptions(descriptor.decompressed.bytes);
+    } catch {
+      failedFiles.push(descriptorPath(bundle.option));
+    }
   }
 
   const dimensionalRows = [];
   for (const dimensionalDescriptor of bundle.dimensional || []) {
-    const descriptor = await decompressDescriptor(dimensionalDescriptor);
-    dimensionalRows.push(...parser.parseDimensionalPalbox(descriptor.decompressed.bytes).rows);
+    try {
+      const descriptor = await decompressDescriptor(dimensionalDescriptor);
+      dimensionalRows.push(...parser.parseDimensionalPalbox(descriptor.decompressed.bytes).rows);
+    } catch {
+      failedFiles.push(descriptorPath(dimensionalDescriptor));
+    }
   }
   const parsed = {
     rows: [...levelParsed.rows, ...dimensionalRows],
     warnings: levelParsed.warnings,
   };
   const collection = collectionFromRows(parsed, level.decompressed, level.source, true);
+  collection.warnings.failedFiles = failedFiles;
 
   const playersByUid = new Map();
   for (const saved of savedPlayers) {

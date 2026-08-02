@@ -134,8 +134,6 @@ export function parentsOf(pal) {
   return pairs;
 }
 
-const stepKey = (step) => JSON.stringify([step.a, step.genderA, step.b, step.genderB]);
-
 // Ruta más corta desde los pals que tienes hasta el objetivo (Dijkstra sobre nº de cruzas).
 // Devuelve { score, steps, tree } o null si no hay ruta.
 export function findShortestPath(ownedIds, targetId) {
@@ -153,7 +151,6 @@ export function findShortestPath(ownedIds, targetId) {
   }
   if (owned.length < 2) return null;
 
-  const targetOwned = ownedSet.has(targetId);
   const dist = new Map();
   const cameFrom = new Map();
   for (const id of owned) {
@@ -163,8 +160,6 @@ export function findShortestPath(ownedIds, targetId) {
 
   const finalized = [];
   const visited = new Set();
-  let bestScore = Infinity;
-  let bestStep = null; // mejor cruza que produce el objetivo cuando ya lo tienes
 
   for (;;) {
     let current = null;
@@ -178,58 +173,49 @@ export function findShortestPath(ownedIds, targetId) {
     if (current == null) break;
     finalized.push(current);
     visited.add(current);
-    if (current === targetId && !targetOwned) break;
+    if (current === targetId) break;
 
     for (const other of finalized) {
       for (const [gA, gB] of [['M', 'F'], ['F', 'M']]) {
         const child = calculateChild(palsById[current], palsById[other], gA, gB);
         if (!child) continue;
         const cost = dist.get(current) + dist.get(other) + 1;
-        const improvesTarget = targetOwned && child.id === targetId && cost <= bestScore;
-        const improvesNode = !visited.has(child.id) && cost < (dist.get(child.id) ?? Infinity);
-        if (improvesTarget || improvesNode) {
+        if (!visited.has(child.id) && cost < (dist.get(child.id) ?? Infinity)) {
           const genders = requiredGenders(palsById[current], palsById[other], child.id, gA, gB);
           const step = { a: current, b: other, genderA: genders.genderA, genderB: genders.genderB };
-          if (improvesTarget && (cost < bestScore || (cost === bestScore && stepKey(step) < stepKey(bestStep)))) {
-            bestScore = cost;
-            bestStep = step;
-          }
-          if (improvesNode) {
-            dist.set(child.id, cost);
-            cameFrom.set(child.id, step);
-          }
+          dist.set(child.id, cost);
+          cameFrom.set(child.id, step);
         }
       }
     }
-    if (targetOwned && bestStep && currentDist + 1 > bestScore) break;
   }
 
-  if (targetOwned ? !bestStep : !visited.has(targetId)) return null;
+  if (!visited.has(targetId)) return null;
 
   // Reconstruye la lista de pasos en orden de dependencia.
   const steps = [];
   const emitted = new Set();
-  const emit = (id, override = null) => {
-    const step = override || cameFrom.get(id);
+  const emit = (id) => {
+    const step = cameFrom.get(id);
     if (!step || emitted.has(id)) return;
     emitted.add(id);
     emit(step.a);
     emit(step.b);
     steps.push({ ...step, child: id });
   };
-  emit(targetId, bestStep);
+  emit(targetId);
 
   return {
     strategy: 'shortest',
-    score: targetOwned ? bestScore : dist.get(targetId),
+    score: dist.get(targetId),
     steps,
-    tree: buildTree(targetId, 'root', '', cameFrom, ownedSet, bestStep),
+    tree: buildTree(targetId, 'root', '', cameFrom, ownedSet),
   };
 }
 
-function buildTree(palId, branchKey, gender, cameFrom, ownedSet, override = null) {
+function buildTree(palId, branchKey, gender, cameFrom, ownedSet) {
   const pal = palsById[palId];
-  const step = override || cameFrom.get(palId);
+  const step = cameFrom.get(palId);
   return {
     branchKey,
     palId,

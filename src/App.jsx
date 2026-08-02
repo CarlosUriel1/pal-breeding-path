@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { findShortestPath, palsById } from './engine/breeding.js';
 import { requestCollectionPlan } from './engine/plannerClient.js';
 import { deleteCollection, loadCollection, saveCollection } from './import/collectionStore.js';
@@ -19,6 +19,14 @@ const load = (key, fallback) => {
     return raw ? JSON.parse(raw) : fallback;
   } catch {
     return fallback;
+  }
+};
+
+const save = (key, value) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // almacenamiento bloqueado: la app sigue funcionando sin persistir
   }
 };
 
@@ -47,6 +55,7 @@ const copy = {
       'too-many-passives': 'Selecciona como máximo cuatro pasivas.',
       'no-compatible-pals': 'El guardado no contiene una pareja de sexos compatible.',
       'missing-passives': 'Una pasiva seleccionada ya no está disponible en la colección.',
+      'passives-on-discarded': 'Una pasiva seleccionada solo existe en ejemplares descartados (especie o sexo desconocidos).',
       'state-budget': 'La búsqueda alcanzó su límite de estados. Reduce las pasivas seleccionadas.',
       'pair-budget': 'La búsqueda es demasiado amplia. Reduce las pasivas seleccionadas.',
       'no-route': 'No se encontró una ruta que transporte todas las pasivas con sexos compatibles.',
@@ -70,6 +79,7 @@ const copy = {
       'too-many-passives': 'Select no more than four passives.',
       'no-compatible-pals': 'The save does not contain a compatible pair of sexes.',
       'missing-passives': 'A selected passive is no longer available in the collection.',
+      'passives-on-discarded': 'A selected passive only exists on discarded pals (unknown species or sex).',
       'state-budget': 'The search reached its state limit. Select fewer passives.',
       'pair-budget': 'The search is too broad. Select fewer passives.',
       'no-route': 'No route can carry every passive with compatible sexes.',
@@ -90,30 +100,67 @@ export default function App() {
   const [saved, setSaved] = useState(() => load('pal.saved.v2', load('pal.saved', [])));
   const [collection, setCollection] = useState(null);
   const [planning, setPlanning] = useState({ status: 'idle', result: null, progress: null, error: '' });
+  const collectionEpoch = useRef(0);
+  const mainRef = useRef(null);
+  const pendingScroll = useRef(false);
+  const scrollAttempts = useRef(0);
   const text = copy[language] || copy.es;
+
+  // En el layout apilado (movil/tablet) el resultado queda bajo el pliegue: al
+  // elegir objetivo hay que traerlo a la vista o parece que no pasa nada.
+  const chooseTarget = (id) => {
+    pendingScroll.current = true;
+    scrollAttempts.current = 0;
+    setTarget(id);
+  };
+
+  // El scroll va en un efecto (no en requestAnimationFrame, que no se dispara si
+  // la pestana esta oculta) y solo tras una eleccion del usuario, nunca al cargar.
+  // Se repite mientras se planifica: con el spinner el documento es mas bajo y el
+  // navegador recorta el desplazamiento, asi que se reajusta al llegar el plan.
+  useEffect(() => {
+    if (!pendingScroll.current) return;
+    if (!target || !window.matchMedia('(max-width: 900px)').matches) {
+      pendingScroll.current = false;
+      return;
+    }
+    const element = mainRef.current;
+    if (!element) return;
+    element.scrollIntoView({ behavior: 'auto', block: 'start' });
+    // El documento sigue creciendo mientras se planifica, asi que el primer intento
+    // se queda corto; se reintenta un numero acotado de veces hasta dejarlo arriba.
+    scrollAttempts.current += 1;
+    if (element.getBoundingClientRect().top <= 8 || scrollAttempts.current >= 4) {
+      pendingScroll.current = false;
+    }
+  }, [target, planning.status, view]);
 
   useEffect(() => {
     let active = true;
+    const epoch = collectionEpoch.current;
     loadCollection()
       .then((stored) => {
-        if (active && (stored?.schemaVersion === 1 || stored?.schemaVersion === 2)) setCollection(stored);
+        if (active && epoch === collectionEpoch.current && (stored?.schemaVersion === 1 || stored?.schemaVersion === 2)) setCollection(stored);
       })
       .catch(() => {});
     return () => { active = false; };
   }, []);
 
-  useEffect(() => localStorage.setItem('pal.language', JSON.stringify(language)), [language]);
-  useEffect(() => localStorage.setItem('pal.sourceMode', JSON.stringify(sourceMode)), [sourceMode]);
-  useEffect(() => localStorage.setItem('pal.owned', JSON.stringify([...owned])), [owned]);
-  useEffect(() => localStorage.setItem('pal.target', JSON.stringify(target)), [target]);
-  useEffect(() => localStorage.setItem('pal.desiredPassives', JSON.stringify(desiredPassiveIds)), [desiredPassiveIds]);
-  useEffect(() => localStorage.setItem('pal.customPassives', JSON.stringify(customPassives)), [customPassives]);
-  useEffect(() => localStorage.setItem('pal.saved.v2', JSON.stringify(saved)), [saved]);
+  useEffect(() => save('pal.language', language), [language]);
+  useEffect(() => save('pal.sourceMode', sourceMode), [sourceMode]);
+  useEffect(() => save('pal.owned', [...owned]), [owned]);
+  useEffect(() => save('pal.target', target), [target]);
+  useEffect(() => save('pal.desiredPassives', desiredPassiveIds), [desiredPassiveIds]);
+  useEffect(() => save('pal.customPassives', customPassives), [customPassives]);
+  useEffect(() => save('pal.saved.v2', saved), [saved]);
 
   useEffect(() => {
     if (!collection) return;
     const available = new Set(availablePassivesFromCollection(collection, customPassives).map((passive) => passive.id));
-    setDesiredPassiveIds((current) => current.filter((id) => available.has(id)).slice(0, 4));
+    setDesiredPassiveIds((current) => {
+      const next = current.filter((id) => available.has(id)).slice(0, 4);
+      return next.length === current.length ? current : next;
+    });
   }, [collection, customPassives]);
 
   const manualResult = useMemo(
@@ -156,13 +203,15 @@ export default function App() {
     const species = nextCollection.speciesIds.filter((id) => palsById[id]);
     if (!species.length) throw new Error(language === 'en' ? 'No compatible species were found.' : 'No se encontraron especies compatibles.');
     const normalized = { ...nextCollection, schemaVersion: 2 };
+    await saveCollection(normalized);
+    collectionEpoch.current += 1;
     setCollection(normalized);
     setOwned(new Set(species));
     setSourceMode('import');
-    await saveCollection(normalized);
   };
 
   const clearCollection = async () => {
+    collectionEpoch.current += 1;
     setCollection(null);
     setOwned(new Set());
     setDesiredPassiveIds([]);
@@ -258,7 +307,7 @@ export default function App() {
               customPassives={customPassives}
             />
           )}
-          {panel === 'target' && <TargetPicker target={target} onSetTarget={setTarget} language={language} />}
+          {panel === 'target' && <TargetPicker target={target} onSetTarget={chooseTarget} language={language} />}
         </div>
         <div className="sidebar-footer-actions">
           <button type="button" className="btn-accent" disabled={!canSave} onClick={savePath}>{text.save}</button>
@@ -268,7 +317,7 @@ export default function App() {
         </div>
       </aside>
 
-      <main className="main">
+      <main className="main" ref={mainRef}>
         <div className="main-toolbar">
           <div className="view-tabs">
             <button type="button" aria-pressed={view === 'tree'} className={`view-tab${view === 'tree' ? ' active' : ''}`} onClick={() => setView('tree')}>{text.tree}</button>

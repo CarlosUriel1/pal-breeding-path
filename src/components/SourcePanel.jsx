@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import SaveImporter from './SaveImporter.jsx';
 import ImportedPalList from './ImportedPalList.jsx';
 import PalPicker from './PalPicker.jsx';
@@ -26,6 +27,7 @@ export default function SourcePanel({
   customPassives,
 }) {
   const text = copy[language] || copy.es;
+  const [importBusy, setImportBusy] = useState(false);
   return (
     <div className="source-panel">
       <div className="source-tabs" role="group" aria-label="Pal source">
@@ -33,6 +35,7 @@ export default function SourcePanel({
           type="button"
           className={sourceMode === 'manual' ? 'active' : ''}
           aria-pressed={sourceMode === 'manual'}
+          disabled={importBusy}
           onClick={() => onSourceMode('manual')}
         >
           {text.manual}
@@ -41,6 +44,7 @@ export default function SourcePanel({
           type="button"
           className={sourceMode === 'import' ? 'active' : ''}
           aria-pressed={sourceMode === 'import'}
+          disabled={importBusy}
           onClick={() => onSourceMode('import')}
         >
           {text.import}
@@ -53,6 +57,7 @@ export default function SourcePanel({
             collection={collection}
             onImported={onImported}
             onClear={onClearCollection}
+            onBusyChange={setImportBusy}
             language={language}
           />
           {collection && (

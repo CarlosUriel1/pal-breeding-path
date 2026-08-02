@@ -121,4 +121,8 @@ consulta `LICENSE` y `THIRD_PARTY_NOTICES.md`.
 Los nombres y las descripciones localizadas de pasivas se adaptaron de
 [PalCalc](https://github.com/tylercamp/palcalc), bajo licencia MIT.
 
+El motor de crianza, `src/data/pals.json` y los iconos de `public/pals/` proceden de
+[PalBreed](https://palbreed.com/breeding-path), que no publica su código ni una licencia; se
+reimplementaron y extrajeron solo para este proyecto de uso personal (ver `THIRD_PARTY_NOTICES.md`).
+
 Palworld, sus nombres, datos e imágenes pertenecen a Pocketpair. Esta es una utilidad fan no oficial.

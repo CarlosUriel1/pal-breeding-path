@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { findLevelSaveCandidates } from '../import/findSaveCandidates.js';
 import { inspectPalworldWorld, parsePalworldSave, parsePalworldWorld } from '../import/workerClient.js';
 
@@ -83,6 +83,15 @@ const localizeImportMessage = (message, language, fallback) => {
   return value || fallback;
 };
 
+const focusableSelector = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
+
 const shortPath = (path) => {
   const parts = String(path || '').replaceAll('\\', '/').split('/').filter(Boolean);
   return parts.slice(-3).join(' / ') || 'Level.sav';
@@ -98,10 +107,14 @@ const formatWorldDate = (world, candidate, language) => {
   }).format(date);
 };
 
-export default function SaveImporter({ collection, onImported, onClear, language = 'es' }) {
+export default function SaveImporter({ collection, onImported, onClear, onBusyChange, language = 'es' }) {
   const text = copy[language] || copy.es;
   const folderInput = useRef(null);
   const fileInput = useRef(null);
+  const importAbort = useRef(null);
+  const wizardRef = useRef(null);
+  const wizardCloseRef = useRef(null);
+  const wizardReturnFocus = useRef(null);
   const [candidates, setCandidates] = useState([]);
   const [selectedWorldId, setSelectedWorldId] = useState('');
   const [selectedPlayerIds, setSelectedPlayerIds] = useState(new Set());
@@ -110,6 +123,16 @@ export default function SaveImporter({ collection, onImported, onClear, language
   const [stage, setStage] = useState('');
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    importAbort.current = new AbortController();
+    return () => importAbort.current?.abort();
+  }, []);
+
+  useEffect(() => {
+    onBusyChange?.(busy);
+    return () => onBusyChange?.(false);
+  }, [busy, onBusyChange]);
 
   const stats = useMemo(() => {
     if (!collection) return null;
@@ -137,14 +160,67 @@ export default function SaveImporter({ collection, onImported, onClear, language
     setStage('');
   };
 
+  const wizardOpen = Boolean(wizardStep);
+
+  useEffect(() => {
+    if (!wizardOpen) return undefined;
+    wizardReturnFocus.current = document.activeElement;
+    if (wizardCloseRef.current && !wizardCloseRef.current.disabled) {
+      wizardCloseRef.current.focus();
+    } else {
+      wizardRef.current?.focus();
+    }
+    return () => {
+      const previous = wizardReturnFocus.current;
+      wizardReturnFocus.current = null;
+      previous?.focus?.();
+    };
+  }, [wizardOpen]);
+
+  useEffect(() => {
+    if (!wizardOpen) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeWizard();
+        return;
+      }
+      if (event.key !== 'Tab' || !wizardRef.current) return;
+
+      const focusable = [...wizardRef.current.querySelectorAll(focusableSelector)].filter(
+        (element) => !element.hasAttribute('disabled') && element.getAttribute('aria-hidden') !== 'true'
+      );
+      if (!focusable.length) {
+        event.preventDefault();
+        wizardRef.current.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [wizardOpen, busy]);
+
   const analyzeCandidates = async (found) => {
     setBusy(true);
     try {
       for (const candidate of found) {
         try {
-          const result = await inspectPalworldWorld(candidate, (next) => setStage(localizeImportMessage(next, language, text.preparing)));
+          const result = await inspectPalworldWorld(candidate, (next) => setStage(localizeImportMessage(next, language, text.preparing)), importAbort.current?.signal);
           setCandidates((current) => current.map((item) => item.relativePath === candidate.relativePath ? { ...item, inspection: result } : item));
         } catch (reason) {
+          if (reason?.name === 'AbortError') break;
           setCandidates((current) => current.map((item) => item.relativePath === candidate.relativePath ? { ...item, inspectError: localizeImportMessage(reason?.message, language, text.readError) } : item));
         }
       }
@@ -178,11 +254,11 @@ export default function SaveImporter({ collection, onImported, onClear, language
     setError('');
     setStage(text.preparing);
     try {
-      const result = await parsePalworldSave(file, (next) => setStage(localizeImportMessage(next, language, text.preparing)));
+      const result = await parsePalworldSave(file, (next) => setStage(localizeImportMessage(next, language, text.preparing)), importAbort.current?.signal);
       await onImported(result);
       setStage('');
     } catch (reason) {
-      setError(localizeImportMessage(reason instanceof Error ? reason.message : '', language, text.readError));
+      if (reason?.name !== 'AbortError') setError(localizeImportMessage(reason instanceof Error ? reason.message : '', language, text.readError));
       setStage('');
     } finally {
       setBusy(false);
@@ -203,13 +279,13 @@ export default function SaveImporter({ collection, onImported, onClear, language
     setStage(text.preparing);
     try {
       const playerIds = selectedPlayers.map((player) => player.id).filter((id) => id !== '__all__');
-      const result = await parsePalworldWorld(selectedCandidate, playerIds, (next) => setStage(localizeImportMessage(next, language, text.preparing)));
+      const result = await parsePalworldWorld(selectedCandidate, playerIds, (next) => setStage(localizeImportMessage(next, language, text.preparing)), importAbort.current?.signal);
       await onImported(result);
       setWizardStep(null);
       setCandidates([]);
       setStage('');
     } catch (reason) {
-      setError(localizeImportMessage(reason instanceof Error ? reason.message : '', language, text.readError));
+      if (reason?.name !== 'AbortError') setError(localizeImportMessage(reason instanceof Error ? reason.message : '', language, text.readError));
       setStage('');
     } finally {
       setBusy(false);
@@ -275,10 +351,10 @@ export default function SaveImporter({ collection, onImported, onClear, language
 
       {wizardStep && (
         <div className="save-wizard-backdrop">
-          <section className="save-wizard-dialog" role="dialog" aria-modal="true" aria-labelledby="save-wizard-title">
+          <section ref={wizardRef} className="save-wizard-dialog" role="dialog" aria-modal="true" aria-labelledby="save-wizard-title" tabIndex={-1}>
             <header className="save-wizard-header">
               <div><span>{text.localWorlds}</span><h2 id="save-wizard-title">{wizardStep === 'world' ? text.chooseWorld : text.choosePlayers}</h2><p>{wizardStep === 'world' ? text.chooseWorldHelp : text.choosePlayersHelp(inspection?.world?.name || selectedCandidate?.worldName || '')}</p></div>
-              <button type="button" className="modal-close" aria-label={text.close} disabled={busy} onClick={closeWizard}>×</button>
+              <button ref={wizardCloseRef} type="button" className="modal-close" aria-label={text.close} disabled={busy} onClick={closeWizard}>×</button>
             </header>
 
             {wizardStep === 'world' ? (

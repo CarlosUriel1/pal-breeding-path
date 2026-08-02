@@ -16,7 +16,7 @@ const copy = {
     tooDeep: 'Ruta demasiado profunda',
     zoomIn: 'Acercar', zoomOut: 'Alejar', center: 'Centrar',
     panHint: 'Arrastra para mover · rueda para acercar o alejar',
-    location: { palbox: 'Palbox', party: 'Equipo', 'base-or-other': 'Base/otro', unknown: 'Ubicación desconocida' },
+    location: { palbox: 'Palbox', party: 'Equipo', dimensional: 'Alm. dimensional', 'base-or-other': 'Base/otro', unknown: 'Ubicación desconocida' },
   },
   en: {
     owned: 'OWNED', bred: 'BREED FIRST', target: 'TARGET',
@@ -26,7 +26,7 @@ const copy = {
     tooDeep: 'Route too deep',
     zoomIn: 'Zoom in', zoomOut: 'Zoom out', center: 'Center',
     panHint: 'Drag to move · use the wheel to zoom',
-    location: { palbox: 'Palbox', party: 'Party', 'base-or-other': 'Base/other', unknown: 'Unknown location' },
+    location: { palbox: 'Palbox', party: 'Party', dimensional: 'Dimensional storage', 'base-or-other': 'Base/other', unknown: 'Unknown location' },
   },
 };
 
@@ -146,6 +146,8 @@ function InteractivePlanTree({ plan, targetId, desiredPassiveIds, language, cust
   const viewportRef = useRef(null);
   const canvasRef = useRef(null);
   const dragRef = useRef(null);
+  const pointersRef = useRef(new Map());
+  const pinchRef = useRef(null);
   const [dragging, setDragging] = useState(false);
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
 
@@ -209,22 +211,48 @@ function InteractivePlanTree({ plan, targetId, desiredPassiveIds, language, cust
   }, [zoomBy]);
 
   const handlePointerDown = (event) => {
-    if (event.button !== 0) return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
     event.currentTarget.setPointerCapture(event.pointerId);
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (pointersRef.current.size === 2) {
+      // Dos dedos: pellizco para zoom; se cancela el arrastre en curso.
+      const [a, b] = [...pointersRef.current.values()];
+      pinchRef.current = { dist: Math.hypot(a.x - b.x, a.y - b.y) };
+      dragRef.current = null;
+      setDragging(false);
+      return;
+    }
     dragRef.current = { pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY, x: transform.x, y: transform.y };
     setDragging(true);
   };
 
   const handlePointerMove = (event) => {
+    const tracked = pointersRef.current.get(event.pointerId);
+    if (tracked) {
+      tracked.x = event.clientX;
+      tracked.y = event.clientY;
+    }
+    if (pinchRef.current && pointersRef.current.size >= 2) {
+      const [a, b] = [...pointersRef.current.values()];
+      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      if (dist > 0 && pinchRef.current.dist > 0) {
+        zoomBy(dist / pinchRef.current.dist, (a.x + b.x) / 2, (a.y + b.y) / 2);
+      }
+      pinchRef.current.dist = dist;
+      return;
+    }
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
     setTransform((current) => ({ ...current, x: drag.x + event.clientX - drag.clientX, y: drag.y + event.clientY - drag.clientY }));
   };
 
   const endDrag = (event) => {
-    if (dragRef.current?.pointerId !== event.pointerId) return;
-    dragRef.current = null;
-    setDragging(false);
+    pointersRef.current.delete(event.pointerId);
+    if (pointersRef.current.size < 2) pinchRef.current = null;
+    if (dragRef.current?.pointerId === event.pointerId) {
+      dragRef.current = null;
+      setDragging(false);
+    }
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   };
 

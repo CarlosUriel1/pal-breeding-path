@@ -1,6 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const source = process.argv[2];
 if (!source) {
@@ -31,6 +34,6 @@ const output = {
   passives,
 };
 
-const destination = path.resolve('src/data/passives_i18n.json');
+const destination = path.join(ROOT, 'src', 'data', 'passives_i18n.json');
 fs.writeFileSync(destination, `${JSON.stringify(output, null, 2)}\n`);
 console.log(`Escritas ${passives.length} pasivas en ${destination}`);

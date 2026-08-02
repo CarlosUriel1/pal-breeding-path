@@ -93,6 +93,8 @@ export default function PalPicker({ mode, owned, target, collection, onToggleOwn
           return (
             <button
               key={pal.id}
+              type="button"
+              aria-pressed={mode === 'owned' ? isOwned : isTarget}
               className={`pal-cell${isOwned ? ' owned' : ''}${isTarget ? ' is-target' : ''}`}
               onClick={() => (mode === 'owned' ? onToggleOwned(pal.id) : onSetTarget(pal.id))}
               title={imported ? `${pal.name}: ${imported.total} ${imported.total === 1 ? text.specimen : text.specimens}` : pal.name}
