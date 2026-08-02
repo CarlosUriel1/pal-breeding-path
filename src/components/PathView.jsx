@@ -11,7 +11,8 @@ function PalTag({ id, gender, isChild }) {
   );
 }
 
-export default function PathView({ steps }) {
+export default function PathView({ steps, language = 'es' }) {
+  const uniqueLabel = language === 'en' ? 'unique combo' : 'combo único';
   return (
     <div className="steps">
       {steps.map((step, i) => {
@@ -24,7 +25,7 @@ export default function PathView({ steps }) {
             <PalTag id={step.b} gender={step.genderB} />
             <span className="op">→</span>
             <PalTag id={step.child} isChild />
-            {info?.unique && <span className="unique-tag">combo único</span>}
+            {info?.unique && <span className="unique-tag">{uniqueLabel}</span>}
           </div>
         );
       })}

@@ -141,9 +141,18 @@ const stepKey = (step) => JSON.stringify([step.a, step.genderA, step.b, step.gen
 export function findShortestPath(ownedIds, targetId) {
   const target = palsById[targetId];
   const owned = [...new Set(ownedIds)].filter((id) => breedableIds.has(id)).sort();
-  if (!target || !breedableIds.has(targetId) || owned.length < 2) return null;
-
   const ownedSet = new Set(owned);
+  if (!target || !breedableIds.has(targetId)) return null;
+  if (ownedSet.has(targetId)) {
+    return {
+      strategy: 'already-owned',
+      score: 0,
+      steps: [],
+      tree: buildTree(targetId, 'root', '', new Map(), ownedSet),
+    };
+  }
+  if (owned.length < 2) return null;
+
   const targetOwned = ownedSet.has(targetId);
   const dist = new Map();
   const cameFrom = new Map();

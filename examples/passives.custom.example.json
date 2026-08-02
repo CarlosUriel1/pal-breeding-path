@@ -1,0 +1,20 @@
+{
+  "passives": [
+    {
+      "id": "CraftSpeed_up2",
+      "en": "Artisan",
+      "es": "Espíritu artesano",
+      "descriptionEn": "Work Speed +50%",
+      "descriptionEs": "Velocidad de trabajo +50%",
+      "rank": 3
+    },
+    {
+      "id": "MoveSpeed_up_3",
+      "en": "Swift",
+      "es": "Imparable",
+      "descriptionEn": "Movement Speed +30%",
+      "descriptionEs": "Velocidad de movimiento +30%",
+      "rank": 3
+    }
+  ]
+}
