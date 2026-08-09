@@ -48,6 +48,8 @@ const copy = {
     planning: 'Buscando una ruta compatible…', explored: (count) => `${count || 0} estados revisados`,
     crosses: (name, count) => `${name} en ${count} cruce${count === 1 ? '' : 's'} planificado${count === 1 ? '' : 's'}`,
     speciesOk: 'Especie objetivo', sexOk: 'Sexo compatible', passivesOk: (count) => `${count}/4 pasivas`,
+    openMenu: 'Abrir el panel de configuración', closeMenu: 'Cerrar el panel de configuración',
+    toLight: 'Cambiar a modo día', toDark: 'Cambiar a modo noche', setup: 'Configuración',
     probabilistic: 'Plan recomendado: la especie y el sexo son compatibles; la herencia de pasivas es probabilística. Repite cada cruce hasta conservar las pasivas indicadas.',
     ownedTarget: (name) => `Ya tienes un ${name} con todas las pasivas solicitadas.`,
     reasons: {
@@ -72,6 +74,8 @@ const copy = {
     planning: 'Looking for a compatible path…', explored: (count) => `${count || 0} states explored`,
     crosses: (name, count) => `${name} in ${count} planned breeding step${count === 1 ? '' : 's'}`,
     speciesOk: 'Target species', sexOk: 'Compatible sex', passivesOk: (count) => `${count}/4 passives`,
+    openMenu: 'Open the setup panel', closeMenu: 'Close the setup panel',
+    toLight: 'Switch to light mode', toDark: 'Switch to dark mode', setup: 'Setup',
     probabilistic: 'Recommended plan: species and sex are compatible; passive inheritance is probabilistic. Repeat each step until the marked passives are preserved.',
     ownedTarget: (name) => `You already own a ${name} with every requested passive.`,
     reasons: {
@@ -89,6 +93,8 @@ const copy = {
 
 export default function App() {
   const [language, setLanguage] = useState(() => load('pal.language', 'es'));
+  const [theme, setTheme] = useState(() => load('pal.theme', 'dark'));
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [panel, setPanel] = useState('source');
   const [sourceMode, setSourceMode] = useState(() => load('pal.sourceMode', 'import'));
   const [view, setView] = useState('tree');
@@ -106,12 +112,18 @@ export default function App() {
   const scrollAttempts = useRef(0);
   const text = copy[language] || copy.es;
 
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+
   // En el layout apilado (movil/tablet) el resultado queda bajo el pliegue: al
-  // elegir objetivo hay que traerlo a la vista o parece que no pasa nada.
+  // elegir objetivo hay que traerlo a la vista o parece que no pasa nada. En ese
+  // ancho tambien se pliega el panel lateral, que es lo que deja el plan arriba.
   const chooseTarget = (id) => {
     pendingScroll.current = true;
     scrollAttempts.current = 0;
     setTarget(id);
+    if (window.matchMedia('(max-width: 900px)').matches) setSidebarOpen(false);
   };
 
   // El scroll va en un efecto (no en requestAnimationFrame, que no se dispara si
@@ -147,6 +159,7 @@ export default function App() {
   }, []);
 
   useEffect(() => save('pal.language', language), [language]);
+  useEffect(() => save('pal.theme', theme), [theme]);
   useEffect(() => save('pal.sourceMode', sourceMode), [sourceMode]);
   useEffect(() => save('pal.owned', [...owned]), [owned]);
   useEffect(() => save('pal.target', target), [target]);
@@ -260,8 +273,25 @@ export default function App() {
   const planErrorReason = planning.result?.reason;
 
   return (
-    <div className="layout">
-      <aside className="sidebar">
+    <div className={`layout${sidebarOpen ? '' : ' sidebar-collapsed'}`}>
+      {/* Barra solo visible en el layout apilado (tablet/movil). */}
+      <div className="mobile-bar">
+        <button
+          type="button"
+          className="hamburger"
+          aria-expanded={sidebarOpen}
+          aria-controls="sidebar-panel"
+          aria-label={sidebarOpen ? text.closeMenu : text.openMenu}
+          onClick={() => setSidebarOpen((open) => !open)}
+        >
+          <span aria-hidden="true" />
+          <span aria-hidden="true" />
+          <span aria-hidden="true" />
+        </button>
+        <strong>{targetPal ? targetPal.name : text.setup}</strong>
+      </div>
+
+      <aside className="sidebar" id="sidebar-panel">
         <header className="sidebar-header">
           <div className="brand-copy">
             <h1>Palworld <em>Breeding Path</em><span className="chip">local</span></h1>
@@ -275,6 +305,16 @@ export default function App() {
                 </button>
               ))}
             </div>
+            <button
+              type="button"
+              className="theme-toggle"
+              aria-pressed={theme === 'light'}
+              aria-label={theme === 'dark' ? text.toLight : text.toDark}
+              title={theme === 'dark' ? text.toLight : text.toDark}
+              onClick={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
+            >
+              {theme === 'dark' ? '☀' : '☾'}
+            </button>
             <HelpDrawer locale={language} onLocaleChange={setLanguage} />
           </div>
         </header>

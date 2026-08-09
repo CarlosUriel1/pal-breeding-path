@@ -1,0 +1,255 @@
+/* ==========================================================================
+   Tema claro (modo dia). Se activa con :root[data-theme="light"].
+   Solo declaraciones de COLOR: aqui no se toca geometria ni tipografia.
+   Cada bloque refleja el orden de styles.css.
+   ========================================================================== */
+
+/* ---------- Variables base ---------- */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  /* Paleta rebajada: lienzo gris azulado, paneles un punto mas claros y los
+     modales como capa superior. Nada de blanco puro de fondo a pantalla. */
+  --bg: #d8dfe9;          /* lienzo general */
+  --panel: #eef2f7;       /* superficies elevadas: sidebar, filas, tarjetas */
+  --card: #dde5ee;        /* celdas y campos sobre panel */
+  --card-hover: #ccd7e4;
+  --border: #b3c2d1;
+  --text: #0d1a24;        /* 13.5:1 sobre el lienzo */
+  --muted: #3f5364;       /* 5.9:1 sobre lienzo, 5.5:1 sobre card-hover */
+  /* El verde #45f882 da 1.4:1 sobre claro: se oscurece manteniendo el tono. */
+  --accent: #0a6f36;
+  --accent-dim: rgba(10, 111, 54, 0.12);
+  /* Oro con matiz amarillo (~49 en vez de ~42 grados) y oscuro para contraste;
+     el relleno se tinta con el mismo oro, no con amarillo palido. */
+  --target: #6f5b00;
+  --target-dim: rgba(184, 146, 0, 0.22);
+}
+
+/* ---------- Cabecera e idioma ---------- */
+/* Separador claro: el original es azul oscuro casi negro. */
+:root[data-theme="light"] .sidebar-header { border-bottom-color: #c6d3e0; }
+
+/* El acento pasa a ser oscuro: el texto del boton activo va en blanco. */
+:root[data-theme="light"] .language-switch button.active { color: #ffffff; }
+
+/* ---------- Importador de partida ---------- */
+:root[data-theme="light"] .save-importer {
+  border-color: #bcd3c5;
+  background-image: linear-gradient(145deg, #dfeee6, #eef2f7);
+}
+
+/* La guia sin coleccion es una tarjeta clara, no un bloque oscuro. */
+:root[data-theme="light"] .save-importer:not(.has-collection) {
+  background-color: #eef2f7;
+  background-image: linear-gradient(145deg, #e5ecf3, #eef2f7);
+}
+
+:root[data-theme="light"] .save-path {
+  background-color: #dbe3ec;
+  color: var(--muted);
+}
+
+:root[data-theme="light"] .save-path-row { background-color: #e0e7f0; }
+
+:root[data-theme="light"] .save-path-row .save-path {
+  background-color: transparent;
+  color: var(--muted);
+}
+
+:root[data-theme="light"] .save-path-row button { background-color: rgba(10, 111, 54, 0.12); }
+:root[data-theme="light"] .save-guide-steps::before { border-left-color: rgba(10, 111, 54, 0.35); }
+
+:root[data-theme="light"] .save-guide-steps li > b {
+  border-color: rgba(10, 111, 54, 0.45);
+  background-color: #dcebe3;
+}
+
+:root[data-theme="light"] .local-badge { border-color: rgba(10, 111, 54, 0.45); }
+
+:root[data-theme="light"] .spinner {
+  border-color: rgba(10, 111, 54, 0.25);
+  border-top-color: var(--accent);
+}
+
+:root[data-theme="light"] .level-file-link,
+:root[data-theme="light"] .players-summary button,
+:root[data-theme="light"] .plan-tree-toolbar output { color: var(--muted); }
+
+/* ---------- Botones y buscador ---------- */
+:root[data-theme="light"] .btn-accent:hover { background-color: rgba(10, 111, 54, 0.18); }
+:root[data-theme="light"] .search:focus-within { box-shadow: 0 0 0 2px rgba(10, 111, 54, 0.22); }
+
+:root[data-theme="light"] .sidebar-footer-actions .btn-ghost.active {
+  border-color: #4c88ad;
+  background-color: rgba(46, 105, 138, 0.12);
+  color: var(--text);
+}
+
+:root[data-theme="light"] .sidebar-footer-actions .btn-ghost span {
+  background-color: rgba(15, 30, 41, 0.09);
+}
+
+:root[data-theme="light"] .source-tabs button.active {
+  background-color: #f4f7fb;
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px #a7b9c9;
+}
+
+/* ---------- Badge numerico sobre las miniaturas ---------- */
+:root[data-theme="light"] .pal-number {
+  border-color: rgba(13, 26, 36, 0.22);
+  background-color: rgba(244, 247, 251, 0.94);
+  color: var(--muted);
+}
+
+/* ---------- Estados de la coleccion (fondo tenue + borde, no solo color) ---------- */
+:root[data-theme="light"] .pal-cell.owned { background-color: rgba(10, 111, 54, 0.10); }
+:root[data-theme="light"] .pal-cell.owned:hover { background-color: rgba(10, 111, 54, 0.18); }
+:root[data-theme="light"] .pal-cell.owned .owned-meta { color: var(--accent); }
+
+:root[data-theme="light"] .pal-cell.is-target {
+  border-color: #8a7100;
+  background-color: var(--target-dim);
+}
+
+:root[data-theme="light"] .pal-cell.is-target:hover { background-color: rgba(184, 146, 0, 0.30); }
+
+/* Oro amarillo (3.5:1 sobre el lienzo) en los bordes de estado objetivo. */
+:root[data-theme="light"] .mode-tab.active.target-mode,
+:root[data-theme="light"] .target-cell.selected,
+:root[data-theme="light"] .flow-card.target.active,
+:root[data-theme="light"] .plan-pal-card.target { border-color: #8a7100; }
+
+/* ---------- Superficies suaves ---------- */
+:root[data-theme="light"] .flow-card { background-color: #e3eaf2; }
+
+:root[data-theme="light"] .flow-card.active,
+:root[data-theme="light"] .flow-card.source.active { background-color: rgba(10, 111, 54, 0.10); }
+
+:root[data-theme="light"] .imported-pal-card,
+:root[data-theme="light"] .passive-option { background-color: #e4ebf3; }
+
+/* Se repite hover/selected: el prefijo del tema gana al fondo base de arriba. */
+:root[data-theme="light"] .passive-option:hover,
+:root[data-theme="light"] .passive-option.selected { background-color: var(--card-hover); }
+
+:root[data-theme="light"] .passive-chip { background-color: rgba(13, 26, 36, 0.06); }
+:root[data-theme="light"] .genetic-step { background-color: #e9eef5; }
+
+/* ---------- Modal de pasivas y asistente de importacion ---------- */
+:root[data-theme="light"] .passive-modal-backdrop { background-color: rgba(15, 30, 41, 0.42); }
+:root[data-theme="light"] .save-wizard-backdrop { background-color: rgba(15, 30, 41, 0.48); }
+
+/* Los modales son la capa mas clara del tema, sobre el velo oscuro. */
+:root[data-theme="light"] .passive-dialog,
+:root[data-theme="light"] .save-wizard-dialog {
+  border-color: #c1cedb;
+  background-color: #f4f7fb;
+  box-shadow: 0 24px 90px rgba(13, 26, 36, 0.26);
+}
+
+:root[data-theme="light"] .passive-dialog-footer {
+  border-top-color: #cbd7e3;
+  background-color: #eaeff5;
+}
+
+:root[data-theme="light"] .passive-dialog-heading > b { background-color: rgba(10, 111, 54, 0.13); }
+
+:root[data-theme="light"] .modal-close {
+  border-color: #c1cedb;
+  background-color: #e2e9f1;
+  color: var(--muted);
+}
+
+:root[data-theme="light"] .modal-close:hover {
+  border-color: #93a7b8;
+  color: var(--text);
+}
+
+/* ---------- Filas de mundos y jugadores ---------- */
+:root[data-theme="light"] .world-modal-row,
+:root[data-theme="light"] .player-modal-row { background-color: #e9eef5; }
+
+:root[data-theme="light"] .world-modal-row:hover,
+:root[data-theme="light"] .world-modal-row.selected {
+  border-color: var(--accent);
+  background-color: rgba(10, 111, 54, 0.10);
+}
+
+:root[data-theme="light"] .player-modal-row:hover,
+:root[data-theme="light"] .player-modal-row.selected { background-color: rgba(10, 111, 54, 0.10); }
+
+:root[data-theme="light"] .world-table-head { color: #3f6a8c; }
+:root[data-theme="light"] .world-identity em { color: #b3261e; }
+:root[data-theme="light"] .world-modal-row > b { color: #0d6f7d; }
+:root[data-theme="light"] .world-no { color: #b3261e !important; }
+
+/* El tick solo se ve al seleccionar: transparente en reposo, blanco encima del acento. */
+:root[data-theme="light"] .player-check {
+  border-color: #b6c5d2;
+  color: transparent;
+}
+
+:root[data-theme="light"] .player-modal-row.selected .player-check { color: #ffffff; }
+:root[data-theme="light"] .player-modal-row > b { background-color: rgba(10, 111, 54, 0.12); }
+:root[data-theme="light"] .save-wizard-footer > span.wizard-error { color: #b3261e; }
+
+/* ---------- Arbol del plan ---------- */
+:root[data-theme="light"] .plan-tree { --tree-line: #7d93a5; }
+
+:root[data-theme="light"] .plan-tree-viewport {
+  border-color: rgba(100, 125, 148, 0.60);
+  background-color: rgba(238, 242, 247, 0.55);
+  background-image: radial-gradient(circle, rgba(63, 83, 100, 0.30) 1px, transparent 1px);
+}
+
+:root[data-theme="light"] .plan-tree-toolbar button { background-color: #eef2f7; }
+/* La tarjeta objetivo del arbol: borde grueso y halo en oro amarillo oscuro. */
+:root[data-theme="light"] .plan-pal-card.tree-card.target {
+  border-color: #6f5b00;
+  box-shadow: 0 0 20px rgba(111, 91, 0, 0.30);
+}
+:root[data-theme="light"] .target-crown { color: #8a7100; }
+
+:root[data-theme="light"] .plan-pal-card.tree-card.bred,
+:root[data-theme="light"] .plan-pal-card.bred .plan-state-badge { color: #7a5717; }
+
+:root[data-theme="light"] .plan-pal-card.owned { border-color: rgba(10, 111, 54, 0.60); }
+:root[data-theme="light"] .plan-pal-card.bred { border-color: rgba(122, 87, 23, 0.60); }
+
+/* ---------- Avisos, insignias y sexo ---------- */
+:root[data-theme="light"] .plan-warning {
+  border-color: rgba(158, 127, 0, 0.75);
+  color: #6f5b00;
+}
+
+:root[data-theme="light"] .empty-hero > span { background-color: rgba(214, 171, 0, 0.28); }
+:root[data-theme="light"] .criterion.ok { border-color: rgba(10, 111, 54, 0.50); }
+
+:root[data-theme="light"] .alpha-badge {
+  border-color: rgba(179, 38, 30, 0.45);
+  color: #b3261e;
+}
+
+:root[data-theme="light"] .import-actions .danger,
+:root[data-theme="light"] .import-error,
+:root[data-theme="light"] .picker-message.error,
+:root[data-theme="light"] .saved-warning,
+:root[data-theme="light"] .competing-passives { color: #b3261e; }
+
+:root[data-theme="light"] .gender { color: #15629e; }
+:root[data-theme="light"] .gender.female { color: #a5286f; }
+
+/* ---------- Escala de rareza de pasivas (compiten con !important) ---------- */
+:root[data-theme="light"] .rainbow { color: #7b2fb5 !important; }
+:root[data-theme="light"] .gold { color: #6f5b00 !important; }
+:root[data-theme="light"] .positive { color: #0a6f36 !important; }
+:root[data-theme="light"] .negative { color: #b3261e !important; }
+:root[data-theme="light"] .negative-strong { color: #9b1220 !important; }
+:root[data-theme="light"] .neutral { color: #4f6373 !important; }
+
+/* ---------- Scrollbars ---------- */
+:root[data-theme="light"] ::-webkit-scrollbar-thumb { background-color: #64778c; }
+:root[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background-color: #4e6073; }
+:root[data-theme="light"] ::-webkit-scrollbar-track { background-color: transparent; }
