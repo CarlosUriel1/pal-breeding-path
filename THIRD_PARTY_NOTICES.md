@@ -1,5 +1,8 @@
 # Third-party notices
 
+The code of this application is Copyright (C) 2026 CarlosUriel1 and is distributed under the
+GNU GPL v3.0 (`LICENSE`). The components below carry their own terms.
+
 ## Palworld Smart Breeder save reader
 
 - Source: https://github.com/JohnnyDalvi/Palworld_Smart_Breeder
@@ -7,14 +10,15 @@
 - Files adapted: `web/savparse.js`, `data/passive_name_map.json`
 - License: GNU GPL v3.0 (`LICENSE`)
 
-The local app maps the parser output to its own Pal dataset and runs the parser in a Web Worker.
+The app maps the parser output to its own Pal dataset and runs the parser in a Web Worker.
 
 ## ooz-wasm
 
 - Source: https://github.com/powzix/ooz
 - Bundled file: `src/vendor/ooz.js`
 - Purpose: Kraken/Oodle decompression for modern Palworld `PlM` saves
-- License: GNU GPL v3.0 or later (`LICENSES/ooz-wasm-GPL-3.0.txt`)
+- License: GNU GPL v3.0 or later, as stated in the license headers of the upstream source files
+  (`LICENSES/ooz-wasm-GPL-3.0.txt`)
 
 Vendored as a precompiled wasm+glue build (Emscripten output). The exact upstream revision was not
 recorded when the build was bundled; the C++ source is available at the upstream repository above.
@@ -29,13 +33,19 @@ recorded when the build was bundled; the C++ source is available at the upstream
 ## PalBreed (palbreed.com)
 
 - Source: https://palbreed.com/breeding-path
-- Data adapted: the breeding engine was reimplemented from the site's minified JavaScript bundle
-  (PalBreed does not publish its source code); `src/data/pals.json` was extracted from that same
-  bundle, and the 299 Pal icons in `public/pals/` were downloaded from its CDN
-- License: none published
+- Breeding engine: `src/engine/breeding.js` is an independent reimplementation of the breeding
+  rules observed on the site (PalBreed does not publish its source code). It contains no PalBreed
+  code.
+- Data: `src/data/pals.json` keeps only the breeding-related fields of each Pal (rank, priority,
+  elements, special combos), which are game data published by Pocketpair, obtained through
+  palbreed.com.
+- Images: the 299 Pal icons in `public/pals/` are Pocketpair artwork obtained from palbreed.com.
+- License: none published by PalBreed.
 
-PalBreed is not open source and grants no license for these assets. They are used here only in this
-personal, non-commercial reimplementation; see the README for scope and validation details.
+These materials are not covered by the GPL license of this repository. They are used in this
+unofficial, non-commercial fan utility solely to identify Pals and reproduce the game's breeding
+rules. If you hold rights over any of them and want them removed or credited differently, please
+open an issue.
 
 ## Game content
 

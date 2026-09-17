@@ -1,8 +1,12 @@
-# Palworld Breeding Path (local y privado)
+# Palworld Breeding Path
 
-Aplicación local inspirada en [PalBreed · Breeding Path](https://palbreed.com/breeding-path),
-hecha en Vite + React para uso personal. No es un fork literal: PalBreed no publica su código
-fuente. La interfaz, los planificadores y la importación son una implementación independiente.
+Copyright (C) 2026 CarlosUriel1. Publicado bajo la licencia GPL-3.0; consulta `LICENSE`.
+
+Aplicación web local inspirada en [PalBreed · Breeding Path](https://palbreed.com/breeding-path),
+hecha en Vite + React. No es un fork: PalBreed no publica su código fuente. La interfaz, los
+planificadores y la importación de guardados son una implementación independiente que funciona
+en cualquier dispositivo con navegador moderno, incluido iPad, donde la herramienta original no
+resultaba usable.
 
 El modo principal calcula con los ejemplares exactos del guardado y combina tres criterios:
 
@@ -12,6 +16,21 @@ El modo principal calcula con los ejemplares exactos del guardado y combina tres
 
 Consulta la [guía completa de uso, privacidad y formatos](docs/GUIA-USO-Y-FORMATO.md) para seguir el
 flujo desde el save hasta el árbol de crianza y revisar los esquemas JSON admitidos.
+
+## Dispositivos compatibles
+
+La app es responsive y se adapta a cualquier tamaño de pantalla: escritorio, portátil, tablet y
+teléfono. En pantallas pequeñas la navegación se agrupa en un menú hamburguesa, los controles son
+táctiles y el árbol de crianza admite arrastre y zoom con pellizco (Pointer Events).
+
+| Dispositivo | Importar carpeta `SaveGames` | Importar `Level.sav` suelto | Planificador y árbol |
+| --- | --- | --- | --- |
+| Windows, macOS, Linux (Chrome, Edge, Firefox, Safari) | Sí | Sí | Sí |
+| iPad / iPadOS (Safari, Chrome) | No: Safari en iPadOS no permite elegir carpetas | Sí, desde la app Archivos | Sí, con gestos táctiles |
+| iPhone y Android | No | Sí | Sí |
+
+En iPad y teléfonos copia primero tu `Level.sav` a iCloud Drive, Archivos o Google Drive y usa el
+botón **Elegir Level.sav**. Todo el análisis ocurre en el navegador del propio dispositivo.
 
 ## Abrir en Windows
 
@@ -26,6 +45,10 @@ npm run dev
 ```
 
 Abre http://127.0.0.1:5199.
+
+Para usarla desde un iPad u otro dispositivo de tu red, genera la versión estática con
+`npm run build` y sirve la carpeta `dist/` con cualquier servidor HTTP, o despliégala en un hosting
+estático. La app no necesita backend.
 
 ## Cargar tus Pals desde el juego
 
@@ -88,7 +111,7 @@ calcula por especies poseídas y no intenta resolver sexo ni pasivas individuale
 | `src/engine/collectionPlanner.js` | Planificador por ejemplar, sexo y conjunto de pasivas; se ejecuta en un Web Worker. |
 | `src/import/` | Descompresión, lector GVAS, Web Worker, selector de mundos y persistencia local de la colección. |
 | `src/vendor/ooz.js` | Descompresor Kraken/Oodle público usado por los saves modernos. |
-| `src/data/pals.json` | Data completa de los 299 pals (stats, elementos, skills, drops, combos, combiRank…) extraída del bundle de palbreed.com. |
+| `src/data/pals.json` | Datos de crianza de los 299 pals (rank, prioridad, elementos, combos especiales) tomados de palbreed.com. |
 | `src/data/passives_i18n.json` | Catálogo bilingüe de pasivas generado desde las localizaciones de PalCalc. |
 | `public/pals/*.png` | Iconos de los 299 pals. |
 | `src/components/` | Importador, lista exacta, selectores, guía, ruta, árbol y planes guardados. |
@@ -104,25 +127,35 @@ dieron resultados idénticos (score, pasos y árbol).
 ## Límites conocidos
 
 - Los contenedores Xbox `CNK` todavía no se pueden importar.
+- En iPadOS, iOS y Android no se puede elegir la carpeta `SaveGames` completa; usa `Level.sav`.
 - Al cargar la carpeta completa, los Pals de base sin propietario verificable se excluyen; los
   almacenes dimensionales `_dps.sav` se incluyen como compartidos sin duplicarlos.
 - El resultado no garantiza una tirada concreta de herencia de pasivas.
 - Los IV no forman parte de la búsqueda.
 - La base de datos debe actualizarse cuando Pocketpair cambie especies, cruces o pasivas.
 
+## Contribuciones
+
+Los issues y pull requests son bienvenidos. Solo el propietario del repositorio revisa y fusiona
+cambios en `main` (ver `.github/CODEOWNERS`). Al enviar un pull request aceptas que tu aportación
+se distribuya bajo GPL-3.0. No incluyas archivos `.sav` ni datos de tu partida en issues o PRs.
+
 ## Licencia y créditos
 
-El lector GVAS se adaptó de
-[JohnnyDalvi/Palworld_Smart_Breeder](https://github.com/JohnnyDalvi/Palworld_Smart_Breeder),
-basado a su vez en `palworld-save-tools`. Los saves modernos se descomprimen con `ooz-wasm`.
-Esos componentes requieren GPL-3.0, por lo que el código de esta app se entrega bajo GPL-3.0;
-consulta `LICENSE` y `THIRD_PARTY_NOTICES.md`.
+El código de esta app se distribuye bajo **GPL-3.0** (`LICENSE`). Los componentes de terceros y
+sus licencias están detallados en `THIRD_PARTY_NOTICES.md`:
 
-Los nombres y las descripciones localizadas de pasivas se adaptaron de
-[PalCalc](https://github.com/tylercamp/palcalc), bajo licencia MIT.
+- El lector GVAS se adaptó de
+  [JohnnyDalvi/Palworld_Smart_Breeder](https://github.com/JohnnyDalvi/Palworld_Smart_Breeder),
+  basado a su vez en `palworld-save-tools` (GPL-3.0).
+- Los saves modernos se descomprimen con [ooz](https://github.com/powzix/ooz) (GPL-3.0 o posterior).
+- Los nombres y descripciones localizadas de pasivas se adaptaron de
+  [PalCalc](https://github.com/tylercamp/palcalc) (MIT).
+- El motor de crianza es una reimplementación independiente del comportamiento observado en
+  [PalBreed](https://palbreed.com/breeding-path). Los datos de crianza de `src/data/pals.json` y
+  los iconos de `public/pals/` se obtuvieron de ese sitio, que no publica licencia; representan
+  datos y arte del juego, no código de PalBreed. Si eres titular de esos materiales y quieres que se
+  retiren o se acrediten de otra forma, abre un issue.
 
-El motor de crianza, `src/data/pals.json` y los iconos de `public/pals/` proceden de
-[PalBreed](https://palbreed.com/breeding-path), que no publica su código ni una licencia; se
-reimplementaron y extrajeron solo para este proyecto de uso personal (ver `THIRD_PARTY_NOTICES.md`).
-
-Palworld, sus nombres, datos e imágenes pertenecen a Pocketpair. Esta es una utilidad fan no oficial.
+Palworld, sus nombres, datos e imágenes pertenecen a Pocketpair, Inc. Esta es una utilidad fan no
+oficial, sin ánimo de lucro y sin relación con Pocketpair ni con PalBreed.
