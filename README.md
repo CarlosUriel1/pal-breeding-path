@@ -2,20 +2,33 @@
 
 Copyright (C) 2026 CarlosUriel1. Publicado bajo la licencia GPL-3.0; consulta `LICENSE`.
 
-Aplicación web local inspirada en [PalBreed · Breeding Path](https://palbreed.com/breeding-path),
-hecha en Vite + React. No es un fork: PalBreed no publica su código fuente. La interfaz, los
-planificadores y la importación de guardados son una implementación independiente que funciona
-en cualquier dispositivo con navegador moderno, incluido iPad, donde la herramienta original no
-resultaba usable.
+Planificador de crianza para Palworld que trabaja con **tus Pals reales**: importa el guardado del
+juego, elige la especie objetivo y hasta cuatro pasivas, y obtén la ruta de cruces más corta con
+parejas de sexo compatible. Todo se procesa en el navegador; no hay servidor, cuenta ni telemetría.
 
-El modo principal calcula con los ejemplares exactos del guardado y combina tres criterios:
+Está inspirado en [PalBreed · Breeding Path](https://palbreed.com/breeding-path), pero no es un
+fork: PalBreed no publica su código. La interfaz, los planificadores y la importación de guardados
+son una implementación independiente en Vite + React que funciona en cualquier dispositivo con
+navegador moderno, incluido iPad, donde la herramienta original no resultaba usable.
 
-1. la especie del Pal objetivo;
-2. el sexo compatible de cada pareja;
-3. hasta cuatro pasivas deseadas que ya existan en la colección importada.
+## Características
 
-Consulta la [guía completa de uso, privacidad y formatos](docs/GUIA-USO-Y-FORMATO.md) para seguir el
-flujo desde el save hasta el árbol de crianza y revisar los esquemas JSON admitidos.
+- **Importación del guardado**: lee `Level.sav` y los archivos del mundo directamente en el
+  navegador (Web Worker) y extrae especie, sexo, nivel, apodo, ubicación, pasivas e IVs.
+- **Planificador por ejemplar**: usa tus Pals como nodos de origen, exige parejas macho/hembra y
+  transporta las pasivas elegidas por las generaciones intermedias.
+- **Ruta y árbol de crianza**: cada cruce como `padre + madre → hijo` con estados `PROPIO`,
+  `CRIAR PRIMERO` y `OBJETIVO`, y la misma información en forma de árbol con zoom y arrastre.
+- **Modo manual**: planifica por especies poseídas sin importar ningún guardado.
+- **Pasivas bilingües**: catálogo de 115 pasivas en inglés, español y español de México, con
+  búsqueda en ambos idiomas y traducciones personalizables por JSON.
+- **Rutas guardadas**: conserva configuraciones para reutilizarlas con la misma colección.
+- **Interfaz en español e inglés**, modo día y modo noche, guía integrada por apartado y panel
+  lateral plegable en pantallas pequeñas.
+- **Privacidad total**: nada sale de tu dispositivo. Ver [Privacidad](#privacidad).
+
+Consulta la [guía completa de uso, privacidad y formatos](docs/GUIA-USO-Y-FORMATO.md) para seguir
+el flujo desde el save hasta el árbol de crianza y revisar los esquemas JSON admitidos.
 
 ## Dispositivos compatibles
 
@@ -32,12 +45,21 @@ táctiles y el árbol de crianza admite arrastre y zoom con pellizco (Pointer Ev
 En iPad y teléfonos copia primero tu `Level.sav` a iCloud Drive, Archivos o Google Drive y usa el
 botón **Elegir Level.sav**. Todo el análisis ocurre en el navegador del propio dispositivo.
 
-## Abrir en Windows
+## Requisitos
+
+- [Node.js](https://nodejs.org/) 20 LTS o superior (Vite 6 necesita Node 18+).
+- Un navegador moderno con soporte de Web Workers, WebAssembly e IndexedDB.
+- Para importar guardados de PC: Palworld instalado, con sus saves en
+  `%LOCALAPPDATA%\Pal\Saved\SaveGames`.
+
+## Instalación y arranque
+
+### Windows
 
 Haz doble clic en `start-local.cmd`. El script instala las dependencias si hacen falta e inicia la
 app. Después abre `http://127.0.0.1:5199`; solo escucha en la computadora local.
 
-También puedes iniciarla desde una terminal:
+### Cualquier sistema
 
 ```bash
 npm install
@@ -46,9 +68,18 @@ npm run dev
 
 Abre http://127.0.0.1:5199.
 
-Para usarla desde un iPad u otro dispositivo de tu red, genera la versión estática con
-`npm run build` y sirve la carpeta `dist/` con cualquier servidor HTTP, o despliégala en un hosting
-estático. La app no necesita backend.
+### Usarla desde iPad u otro dispositivo
+
+La app no necesita backend. Genera la versión estática y sírvela con cualquier servidor HTTP de tu
+red o en un hosting estático (GitHub Pages, Netlify, Vercel, etc.):
+
+```bash
+npm run build
+npm run preview
+```
+
+`npm run preview` sirve la carpeta `dist/` en local; para exponerla en tu red usa
+`npm run preview -- --host` y abre la IP de tu computadora desde el iPad.
 
 ## Cargar tus Pals desde el juego
 
@@ -57,10 +88,6 @@ estático. La app no necesita backend.
 3. Elige el mundo; la app combina `Level.sav`, `LevelMeta.sav`, `WorldOption.sav` y `Players/*.sav`.
 4. Marca uno o varios jugadores. Sus archivos `_dps.sav` compartidos se incluyen automáticamente.
 5. También puedes usar **Elegir Level.sav** para cargar solo ese archivo, sin separar jugadores.
-
-Los archivos se leen en un Web Worker dentro de tu navegador. No se suben, no hay servidor de datos,
-telemetría, anuncios ni recursos web externos. La colección normalizada se guarda en IndexedDB y
-los `.sav` originales no se conservan.
 
 Se importan especie, sexo, nivel, apodo, ubicación, pasivas e IVs de cada ejemplar. El planificador
 usa esos ejemplares como nodos de origen, exige parejas macho/hembra y transporta las pasivas
@@ -84,6 +111,7 @@ descomprimido. Los contenedores Xbox `CNK` aún no son compatibles. El selector 
    save solo se habilitan mientras esté cargada la misma colección, porque se recalculan al abrirlas.
 
 El botón **Guía** abre un menú de instrucciones para cada apartado, disponible en español e inglés.
+El conmutador de tema alterna entre modo día y modo noche y recuerda tu elección.
 
 ### Pasivas bilingües y archivo personalizado
 
@@ -103,22 +131,46 @@ ejemplares más limpios.
 El modo **Seleccionar manualmente** sigue disponible cuando no quieras importar un save. Ese modo
 calcula por especies poseídas y no intenta resolver sexo ni pasivas individuales.
 
-## Estructura
+## Privacidad
+
+- Los archivos `.sav` se leen en un Web Worker dentro de tu navegador. No se suben a ningún
+  servidor: no hay backend, telemetría, anuncios ni recursos web externos.
+- La colección normalizada se guarda en IndexedDB del navegador y los `.sav` originales no se
+  conservan. El botón **Quitar** borra la colección; nunca toca tus archivos del juego.
+- Idioma, tema, objetivo, pasivas y rutas guardadas viven en `localStorage`.
+- La app nunca escribe en la carpeta de guardados de Palworld.
+
+Detalles en la sección [Privacidad y almacenamiento](docs/GUIA-USO-Y-FORMATO.md#privacidad-y-almacenamiento)
+de la guía.
+
+## Desarrollo
+
+| Comando | Qué hace |
+| --- | --- |
+| `npm run dev` | Servidor de desarrollo en `127.0.0.1:5199` con recarga en caliente. |
+| `npm run build` | Compila la versión estática en `dist/`. |
+| `npm run preview` | Sirve `dist/` para probar la compilación. |
+| `node tools/refresh-data.mjs` | Re-extrae `src/data/pals.json` e iconos cuando salga contenido nuevo del juego. |
+| `node tools/build-passive-catalog.mjs` | Regenera el catálogo de pasivas desde una copia local de PalCalc. |
+
+### Estructura
 
 | Ruta | Qué es |
 | --- | --- |
 | `src/engine/breeding.js` | Motor por especies: pool criable, combos únicos, fórmula de rank `(a+b+1)>>1`, ruta más corta y árbol. |
 | `src/engine/collectionPlanner.js` | Planificador por ejemplar, sexo y conjunto de pasivas; se ejecuta en un Web Worker. |
 | `src/import/` | Descompresión, lector GVAS, Web Worker, selector de mundos y persistencia local de la colección. |
-| `src/vendor/ooz.js` | Descompresor Kraken/Oodle público usado por los saves modernos. |
-| `src/data/pals.json` | Datos de crianza de los 299 pals (rank, prioridad, elementos, combos especiales) tomados de palbreed.com. |
+| `src/vendor/ooz.js` | Descompresor Kraken/Oodle usado por los saves modernos. |
+| `src/data/pals.json` | Datos de crianza de los 299 pals (rank, prioridad, elementos, combos especiales). |
 | `src/data/passives_i18n.json` | Catálogo bilingüe de pasivas generado desde las localizaciones de PalCalc. |
 | `public/pals/*.png` | Iconos de los 299 pals. |
 | `src/components/` | Importador, lista exacta, selectores, guía, ruta, árbol y planes guardados. |
-| `tools/refresh-data.mjs` | Re-extrae data e iconos del sitio (`node tools/refresh-data.mjs`) cuando salga contenido nuevo del juego. |
-| `tools/build-passive-catalog.mjs` | Regenera el catálogo de traducciones desde una copia local de PalCalc. |
+| `src/i18n.js` | Textos de la interfaz y de la guía en español e inglés. |
+| `src/theme-light.css` | Tema de modo día; `src/styles.css` contiene el tema base de modo noche. |
+| `docs/` | Guía de uso, privacidad y formatos JSON. |
+| `examples/` | Archivos de ejemplo que puede preparar el usuario. |
 
-## Fidelidad del motor
+### Fidelidad del motor
 
 El motor portado se validó contra el motor original del sitio (ejecutado aislado en Node):
 `calculateChild` en los 297×297×2 pares posibles y `findShortestPath` en 2000 casos aleatorios
