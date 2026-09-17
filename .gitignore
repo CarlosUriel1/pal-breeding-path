@@ -1,5 +1,5 @@
 node_modules/
 dist/
 tools/.chunks/
-.claude/settings.local.json
+.claude/
 *.sav
