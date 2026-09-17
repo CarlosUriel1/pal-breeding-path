@@ -27,6 +27,16 @@ navegador moderno, incluido iPad, donde la herramienta original no resultaba usa
   lateral plegable en pantallas pequeñas.
 - **Privacidad total**: nada sale de tu dispositivo. Ver [Privacidad](#privacidad).
 
+## Capturas de pantalla
+
+| Pantalla principal (escritorio) | Importar save |
+| --- | --- |
+| ![Imagen1](docs/img/imagen1.png) | ![Imagen2](docs/img/imagen2.png) |
+
+| Ruta de crianza | Árbol de crianza en iPad |
+| --- | --- |
+| ![Imagen3](docs/img/imagen3.png) | ![Imagen4](docs/img/imagen4.png) |
+
 Consulta la [guía completa de uso, privacidad y formatos](docs/GUIA-USO-Y-FORMATO.md) para seguir
 el flujo desde el save hasta el árbol de crianza y revisar los esquemas JSON admitidos.
 
